@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@latest"></script>
+</head>
+
+<body>
+    <h1>WebSocket Chat</h1>
+    <input type="text" id="roomId" placeholder="Enter Room ID" />
+    <button onclick="joinRoom()">Join Room</button>
+    <button onclick="leaveRoom()">Leave Room</button>
+    <br>
+    <input type="text" id="message" placeholder="Type a message" />
+    <button onclick="sendMessage()">Send</button>
+    <div id="messages"></div>
+
+    <script>
+        const socket = new SockJS('http://localhost:8080/ws');
+        const stompClient = new StompJs.Client({
+            webSocketFactory: () => socket,
+            reconnectDelay: 5000,
+            onConnect: () => {
+                console.log('Connected to WebSocket');
+                const sessionId = stompClient.sessionId;
+                console.log("Session ID: ", sessionId);
+
+                // Now that we're connected, we can join the room
+                joinRoom(sessionId);
+            },
+            onDisconnect: () => {
+                console.log('Disconnected from WebSocket');
+            },
+            onStompError: (frame) => {
+                console.error('Broker error: ', frame.headers['message']);
+            }
+        });
+
+        stompClient.activate();
+
+        function joinRoom(sessionId) {
+            const roomId = "1234";  // Hardcoded room ID
+            stompClient.publish({
+                destination: `/app/join/${roomId}`  // Publish the join event for room 1234
+            });
+            console.log(`Joined room ${roomId}`);
+
+            // Now subscribe using the sessionId
+            stompClient.subscribe(`/user/queue/chat/${roomId}`, (message) => {
+                console.log(`Received message: ${message.body}`);  // Check the raw message
+                const chatMessage = JSON.parse(message.body);  // Parse it as JSON
+                const messageBox = document.getElementById('messages');
+                const msg = document.createElement('p');
+                msg.textContent = `${chatMessage.sender}: ${chatMessage.content}`;  // Display sender and content
+                messageBox.appendChild(msg);
+            });
+        }
+
+        function leaveRoom() {
+            const roomId = document.getElementById('roomId').value;
+            stompClient.publish({
+                destination: `/app/leave/${roomId}`
+            });
+            console.log(`Left room ${roomId}`);
+        }
+
+        function sendMessage() {
+            const roomId = document.getElementById('roomId').value;
+            const message = document.getElementById('message').value;
+            const chatMessage = { sender: "John", content: message, type: "text" };
+            stompClient.publish({
+                destination: "/app/chat/1234",
+                headers: {
+                    'content-type': 'application/json'
+                },
+                body: JSON.stringify(chatMessage)
+            });
+
+            console.log(`Sent message: ${message}`);
+        }
+    </script>
+</body>
+
+</html>
