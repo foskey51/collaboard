@@ -1,11 +1,10 @@
-import Background from "./components/Background";
-import CircleDrawer from "../shapes/PenTool";
+import React from "react";
+import AppRoutes from "../AppRoutes";
 
 const App = () => {
   return (
-    <div className="relative w-full h-screen">
-      <Background />
-      <CircleDrawer />
+    <div>
+      <AppRoutes />
     </div>
   );
 };
