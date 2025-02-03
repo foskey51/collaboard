@@ -13,7 +13,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
 
-import com.example.config.UserHandshakeHandler;
+import payload.request.ChatMessage;
 
 import java.security.Principal;
 import java.security.PrivateKey;

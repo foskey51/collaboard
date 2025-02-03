@@ -1,4 +1,4 @@
-package com.example.controller;
+package payload.request;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
