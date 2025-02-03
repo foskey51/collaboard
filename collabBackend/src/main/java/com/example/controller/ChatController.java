@@ -3,13 +3,17 @@ package com.example.controller;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 import org.springframework.messaging.MessageHeaders;
+import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessageType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.stereotype.Controller;
+
+import com.example.config.UserHandshakeHandler;
 
 import java.security.Principal;
 import java.security.PrivateKey;
@@ -33,12 +37,17 @@ public class ChatController {
     @MessageMapping("/chat/{roomId}")
     public void sendMessage( @DestinationVariable("roomId") String roomId, @Payload ChatMessage message, SimpMessageHeaderAccessor headerAccessor) {
         logger.info("Received message in room {}: {}", roomId, message.toString());
-        logger.info("Headers: {}", headerAccessor.getMessageHeaders());
+        logger.info("Headers: {}", headerAccessor.getSessionId());
         String senderSSID = headerAccessor.getSessionId();
         if (roomUsers.containsKey(roomId)) {
             roomUsers.get(roomId).forEach(user -> {
                 if (!user.equals(senderSSID)) {
-                    messagingTemplate.convertAndSendToUser(user, "/queue/chat/"+roomId, message);
+                	logger.info("RoomID: {}, Session: {}",roomId,user);
+                	try {
+                    	messagingTemplate.convertAndSendToUser(user , "/queue/chat/"+roomId, message);
+					} catch (MessagingException e) {
+						System.err.println(e);
+					}
                 }
             });
         }

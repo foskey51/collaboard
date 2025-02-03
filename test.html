@@ -24,13 +24,29 @@
         const stompClient = new StompJs.Client({
             webSocketFactory: () => socket,
             reconnectDelay: 5000,
-            onConnect: () => {
+            onConnect: (frame) => {
                 console.log('Connected to WebSocket');
-                const sessionId = stompClient.sessionId;
-                console.log("Session ID: ", sessionId);
+                console.log(socket._transport.url);
+                console.log('WebSocket Connection Details:');
+                console.log(`  URL: ${stompClient.webSocket.url}`);
+                console.log(`  Protocol: ${stompClient.webSocket.protocol}`);
+                console.log(`  Ready State: ${stompClient.webSocket.readyState}`);
 
-                // Now that we're connected, we can join the room
-                joinRoom(sessionId);
+                const sessionId = frame.headers['user-name'] || socket._transport.url.split('/')[5].split(':')[0];
+                console.log(`Session ID: ${sessionId}`);
+                stompClient.subscribe(`/user/${sessionId}/queue/chat/1234`, (message) => {
+                    console.log(`Received message: ${message.body}`);
+                    const chatMessage = JSON.parse(message.body);
+                    const messageBox = document.getElementById('messages');
+                    const msg = document.createElement('p');
+                    msg.textContent = `${chatMessage.sender}: ${chatMessage.content}`;
+                    messageBox.appendChild(msg);
+                });
+
+                joinRoom();
+            },
+            onStompError: (frame) => {
+                console.error('Broker error: ', frame.headers['message']);
             },
             onDisconnect: () => {
                 console.log('Disconnected from WebSocket');
@@ -42,22 +58,22 @@
 
         stompClient.activate();
 
-        function joinRoom(sessionId) {
+        function joinRoom() {
             const roomId = "1234";  // Hardcoded room ID
             stompClient.publish({
                 destination: `/app/join/${roomId}`  // Publish the join event for room 1234
             });
             console.log(`Joined room ${roomId}`);
 
-            // Now subscribe using the sessionId
             stompClient.subscribe(`/user/queue/chat/${roomId}`, (message) => {
-                console.log(`Received message: ${message.body}`);  // Check the raw message
-                const chatMessage = JSON.parse(message.body);  // Parse it as JSON
+                console.log(`Received message: ${message.body}`);
+                const chatMessage = JSON.parse(message.body);
                 const messageBox = document.getElementById('messages');
                 const msg = document.createElement('p');
-                msg.textContent = `${chatMessage.sender}: ${chatMessage.content}`;  // Display sender and content
+                msg.textContent = `${chatMessage.sender}: ${chatMessage.content}`;
                 messageBox.appendChild(msg);
             });
+
         }
 
         function leaveRoom() {
